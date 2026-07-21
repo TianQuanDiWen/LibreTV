@@ -174,6 +174,7 @@ app.get('/proxy/:encodedUrl', async (req, res) => {
 
     // 添加请求超时和重试逻辑
     const maxRetries = config.maxRetries;
+    const isDoubanImage = new URL(targetUrl).hostname.endsWith('.doubanio.com');
     let retries = 0;
     
     const makeRequest = async () => {
@@ -184,7 +185,10 @@ app.get('/proxy/:encodedUrl', async (req, res) => {
           responseType: 'stream',
           timeout: config.timeout,
           headers: {
-            'User-Agent': config.userAgent
+            'User-Agent': config.userAgent,
+            ...(isDoubanImage && {
+              'Referer': 'https://movie.douban.com/'
+            })
           }
         });
       } catch (error) {

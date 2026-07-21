@@ -254,7 +254,9 @@ export async function onRequest(context) {
             // 尝试传递一些原始请求的头信息
             'Accept-Language': request.headers.get('Accept-Language') || 'zh-CN,zh;q=0.9,en;q=0.8',
             // 尝试设置 Referer 为目标网站的域名，或者传递原始 Referer
-            'Referer': request.headers.get('Referer') || new URL(targetUrl).origin
+            'Referer': new URL(targetUrl).hostname.endsWith('.doubanio.com')
+                ? 'https://movie.douban.com/'
+                : request.headers.get('Referer') || new URL(targetUrl).origin
         });
 
         try {
