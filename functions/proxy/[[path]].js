@@ -247,7 +247,7 @@ export async function onRequest(context) {
     }
 
     // 获取远程内容及其类型
-    async function fetchContentWithType(targetUrl) {
+    async function fetchContentWithType(targetUrl, asBinary = false) {
         const headers = new Headers({
             'User-Agent': getRandomUserAgent(),
             'Accept': '*/*',
@@ -271,10 +271,9 @@ export async function onRequest(context) {
                  throw new Error(`HTTP error ${response.status}: ${response.statusText}. URL: ${targetUrl}. Body: ${errorBody.substring(0, 150)}`);
             }
 
-            // 读取响应内容为文本
-            const content = await response.text();
             const contentType = response.headers.get('Content-Type') || '';
-            logDebug(`请求成功: ${targetUrl}, Content-Type: ${contentType}, 内容长度: ${content.length}`);
+            const content = asBinary ? await response.arrayBuffer() : await response.text();
+            logDebug(`请求成功: ${targetUrl}, Content-Type: ${contentType}, 内容长度: ${asBinary ? content.byteLength : content.length}`);
             return { content, contentType, responseHeaders: response.headers }; // 同时返回原始响应头
 
         } catch (error) {
@@ -500,6 +499,15 @@ export async function onRequest(context) {
         }
 
         logDebug(`收到代理请求: ${targetUrl}`);
+
+        // 豆瓣封面必须以二进制原样转发，不能经过 text() 或 JSON/KV 缓存。
+        if (new URL(targetUrl).hostname.endsWith('.doubanio.com')) {
+            const { content, contentType, responseHeaders } = await fetchContentWithType(targetUrl, true);
+            return createResponse(content, 200, {
+                'Content-Type': contentType || 'image/jpeg',
+                'Cache-Control': responseHeaders.get('Cache-Control') || `public, max-age=${CACHE_TTL}`
+            });
+        }
 
         // --- 缓存检查 (KV) ---
         const cacheKey = `proxy_raw:${targetUrl}`; // 使用原始内容的缓存键
