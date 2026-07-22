@@ -10,6 +10,13 @@ let cachedPasswordHash = null;
  * 获取当前会话的密码哈希
  */
 async function getPasswordHash() {
+    // 优先使用当前部署实例注入的哈希，避免旧的本地缓存导致鉴权失败。
+    if (window.__ENV__?.PASSWORD) {
+        cachedPasswordHash = window.__ENV__.PASSWORD;
+        localStorage.setItem('proxyAuthHash', cachedPasswordHash);
+        return cachedPasswordHash;
+    }
+
     if (cachedPasswordHash) {
         return cachedPasswordHash;
     }
