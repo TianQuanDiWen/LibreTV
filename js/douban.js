@@ -528,16 +528,15 @@ function renderDoubanCards(data, container) {
                 .replace(/</g, '&lt;')
                 .replace(/>/g, '&gt;');
             
-            // 处理图片URL
-            // 1. 直接使用豆瓣图片URL (添加no-referrer属性)
+            // 处理图片 URL
             const originalCoverUrl = item.cover;
             
             // 为不同设备优化卡片布局
             card.innerHTML = `
                 <div class="relative w-full aspect-[2/3] overflow-hidden cursor-pointer" onclick="fillAndSearchWithDouban('${safeTitle}')">
-                    <img src="${originalCoverUrl}" alt="${safeTitle}" 
+                    <img src="image/logo.png" alt="${safeTitle}"
                         class="w-full h-full object-cover transition-transform duration-500 hover:scale-110"
-                        loading="lazy" referrerpolicy="no-referrer">
+                        loading="lazy">
                     <div class="absolute inset-0 bg-gradient-to-t from-black to-transparent opacity-60"></div>
                     <div class="absolute bottom-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded-sm">
                         <span class="text-yellow-400">★</span> ${safeRate}
@@ -557,11 +556,9 @@ function renderDoubanCards(data, container) {
                 </div>
             `;
 
-            // 豆瓣图片可能因防盗链拒绝直连。失败时异步生成带鉴权的代理 URL。
+            // 豆瓣图片直连会被防盗链拒绝，首次加载即使用带鉴权的代理 URL。
             const coverImage = card.querySelector('img');
-            const useAuthenticatedProxy = async () => {
-                coverImage.removeEventListener('error', useAuthenticatedProxy);
-
+            const loadCover = async () => {
                 try {
                     const proxyUrl = PROXY_URL + encodeURIComponent(originalCoverUrl);
                     if (!window.ProxyAuth?.addAuthToProxyUrl) {
@@ -573,14 +570,13 @@ function renderDoubanCards(data, container) {
                         throw new Error('无法获取封面代理鉴权哈希');
                     }
 
-                    coverImage.classList.add('object-contain');
                     coverImage.src = authenticatedUrl;
                 } catch (error) {
                     console.error('豆瓣封面代理 URL 生成失败：', error);
                 }
             };
 
-            coverImage.addEventListener('error', useAuthenticatedProxy);
+            loadCover();
             
             fragment.appendChild(card);
         });
